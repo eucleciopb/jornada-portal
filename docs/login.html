@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login | Jornada Portal</title>
+
+  <style>
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#0f172a;
+      color:#f8fafc;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .card{
+      width:100%;
+      max-width:420px;
+      background:#111827;
+      padding:28px;
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.45);
+    }
+    h1{ margin:0 0 8px; font-size:22px; }
+    p{ margin:0 0 18px; opacity:.85; }
+    label{ display:block; font-size:13px; margin:12px 0 6px; opacity:.9; }
+    input{
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:#0b1220;
+      color:#f8fafc;
+      outline:none;
+    }
+    button{
+      width:100%;
+      margin-top:16px;
+      padding:12px;
+      border:0;
+      border-radius:10px;
+      background:#2563eb;
+      color:#fff;
+      font-weight:bold;
+      cursor:pointer;
+    }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .msg{ margin-top:12px; font-size:14px; opacity:.9; }
+    .links{ margin-top:14px; display:flex; justify-content:space-between; font-size:13px; }
+    a{ color:#93c5fd; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Entrar</h1>
+    <p>Use seu e-mail e senha cadastrados.</p>
+
+    <label for="email">E-mail</label>
+    <input id="email" type="email" placeholder="seuemail@empresa.com" />
+
+    <label for="password">Senha</label>
+    <input id="password" type="password" placeholder="••••••••" />
+
+    <button id="btn">Entrar</button>
+    <div class="msg" id="msg"></div>
+
+    <div class="links">
+      <a href="index.html">Voltar</a>
+      <a href="#" id="createTest">Criar usuário teste (temporário)</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { login } from "./js/auth.js";
+    import { auth } from "./js/firebase.js";
+    import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const btn = document.getElementById("btn");
+    const msg = document.getElementById("msg");
+
+    btn.addEventListener("click", async () => {
+      msg.textContent = "";
+      btn.disabled = true;
+      try {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) throw new Error("Preencha e-mail e senha.");
+
+        await login(email, password);
+        msg.textContent = "Login OK. Redirecionando...";
+        // Próximo passo: redirecionar por perfil (GESTOR/ANALISTA)
+        window.location.href = "index.html";
+      } catch (e) {
+        msg.textContent = "Erro: " + (e?.message || e);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // TEMPORÁRIO: cria usuário teste (remover depois)
+    document.getElementById("createTest").addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      msg.textContent = "";
+      btn.disabled = true;
+      try {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        if (!email || !password) throw new Error("Digite e-mail e senha para criar o usuário teste.");
+
+        await createUserWithEmailAndPassword(auth, email, password);
+        msg.textContent = "Usuário criado. Agora clique em Entrar.";
+      } catch (e) {
+        msg.textContent = "Erro: " + (e?.message || e);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
