@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestor | Jornada Portal</title>
+</head>
+<body>
+  <h2>Painel do Gestor</h2>
+  <div id="info"></div>
+
+  <script type="module">
+    import { requireAuth } from "./js/guard.js";
+
+    requireAuth({
+      allowRoles: ["GESTOR"],
+      onOk: (user, profile) => {
+        document.getElementById("info").innerHTML =
+          `<p>Bem-vindo, <b>${profile.nome}</b> (${profile.role})</p>
+           <p>UID: ${user.uid}</p>
+           <p>CDs: ${(profile.cdsPermitidos || []).join(", ")}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
