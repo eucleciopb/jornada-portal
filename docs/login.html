@@ -18,7 +18,7 @@
     }
     .card{
       width:100%;
-      max-width:420px;
+      max-width:440px;
       background:#111827;
       padding:28px;
       border-radius:14px;
@@ -47,11 +47,33 @@
       font-weight:bold;
       cursor:pointer;
     }
+    button.secondary{
+      background:#334155;
+    }
     button:disabled{ opacity:.6; cursor:not-allowed; }
-    .msg{ margin-top:12px; font-size:14px; opacity:.9; }
-    .links{ margin-top:14px; display:flex; justify-content:space-between; font-size:13px; }
+    .msg{ margin-top:12px; font-size:14px; opacity:.95; min-height:18px; }
+    .row{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    }
+    .row > button{ margin-top:0; }
+    .links{
+      margin-top:14px;
+      display:flex;
+      justify-content:space-between;
+      font-size:13px;
+      gap:10px;
+      flex-wrap:wrap;
+    }
     a{ color:#93c5fd; text-decoration:none; }
     a:hover{ text-decoration:underline; }
+    .hint{
+      margin-top:10px;
+      font-size:12px;
+      opacity:.75;
+      line-height:1.4;
+    }
   </style>
 </head>
 
@@ -61,65 +83,153 @@
     <p>Use seu e-mail e senha cadastrados.</p>
 
     <label for="email">E-mail</label>
-    <input id="email" type="email" placeholder="seuemail@empresa.com" />
+    <input id="email" type="email" placeholder="seuemail@empresa.com" autocomplete="username" />
 
     <label for="password">Senha</label>
-    <input id="password" type="password" placeholder="••••••••" />
+    <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
 
-    <button id="btn">Entrar</button>
+    <button id="btnLogin">Entrar</button>
+
+    <div class="row">
+      <button id="btnCreate" class="secondary" type="button">Criar usuário teste (temporário)</button>
+      <button id="btnGoHome" class="secondary" type="button">Voltar</button>
+    </div>
+
     <div class="msg" id="msg"></div>
 
+    <div class="hint">
+      Observação: “Criar usuário teste” é apenas para acelerar o MVP. Depois vamos remover e deixar só o gestor/admin cadastrar usuários.
+    </div>
+
     <div class="links">
-      <a href="index.html">Voltar</a>
-      <a href="#" id="createTest">Criar usuário teste (temporário)</a>
+      <a href="index.html">Ir para o Index</a>
     </div>
   </div>
 
   <script type="module">
-    import { login } from "./js/auth.js";
+    // Dependências internas
     import { auth } from "./js/firebase.js";
-    import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getUserProfile, createUserProfileIfMissing } from "./js/db.js";
 
-    const btn = document.getElementById("btn");
-    const msg = document.getElementById("msg");
+    // Firebase Auth (CDN)
+    import {
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    btn.addEventListener("click", async () => {
-      msg.textContent = "";
-      btn.disabled = true;
+    const $ = (id) => document.getElementById(id);
+    const msg = $("msg");
+    const btnLogin = $("btnLogin");
+    const btnCreate = $("btnCreate");
+    const btnGoHome = $("btnGoHome");
+
+    function setBusy(isBusy) {
+      btnLogin.disabled = isBusy;
+      btnCreate.disabled = isBusy;
+      btnGoHome.disabled = isBusy;
+    }
+
+    function show(text) {
+      msg.textContent = text || "";
+    }
+
+    function getCredentials() {
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      return { email, password };
+    }
+
+    function redirectByRole(profile) {
+      if (profile.role === "GESTOR") {
+        window.location.href = "manager-dashboard.html";
+        return;
+      }
+      if (profile.role === "ANALISTA") {
+        window.location.href = "analyst-dashboard.html";
+        return;
+      }
+      // fallback
+      window.location.href = "index.html";
+    }
+
+    async function ensureProfile(uid, email) {
+      // Se já existe, usa o que está no banco
+      const existing = await getUserProfile(uid);
+      if (existing) return existing;
+
+      // Se não existe, cria um perfil padrão TEMPORÁRIO
+      // Depois a gente troca para: somente gestor/admin cadastra perfis
+      const defaultProfile = {
+        nome: email.split("@")[0],
+        email,
+        role: "GESTOR",               // temporário: primeiro login vira gestor
+        cdsPermitidos: ["CD_ALUMINIO"],
+        ativo: true,
+        createdAt: new Date().toISOString()
+      };
+
+      return createUserProfileIfMissing(uid, defaultProfile);
+    }
+
+    async function doLogin() {
+      setBusy(true);
+      show("Entrando...");
       try {
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
-
+        const { email, password } = getCredentials();
         if (!email || !password) throw new Error("Preencha e-mail e senha.");
 
-        await login(email, password);
-        msg.textContent = "Login OK. Redirecionando...";
-        // Próximo passo: redirecionar por perfil (GESTOR/ANALISTA)
-        window.location.href = "index.html";
-      } catch (e) {
-        msg.textContent = "Erro: " + (e?.message || e);
-      } finally {
-        btn.disabled = false;
-      }
-    });
+        await signInWithEmailAndPassword(auth, email, password);
 
-    // TEMPORÁRIO: cria usuário teste (remover depois)
-    document.getElementById("createTest").addEventListener("click", async (ev) => {
-      ev.preventDefault();
-      msg.textContent = "";
-      btn.disabled = true;
+        const uid = auth.currentUser?.uid;
+        if (!uid) throw new Error("Não foi possível obter UID do usuário.");
+
+        const profile = await ensureProfile(uid, email);
+
+        if (profile.ativo !== true) {
+          throw new Error("Usuário inativo. Procure o administrador.");
+        }
+
+        show("Login OK. Redirecionando...");
+        redirectByRole(profile);
+      } catch (e) {
+        show("Erro: " + (e?.message || e));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function createTestUser() {
+      setBusy(true);
+      show("Criando usuário...");
       try {
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
-        if (!email || !password) throw new Error("Digite e-mail e senha para criar o usuário teste.");
+        const { email, password } = getCredentials();
+        if (!email || !password) throw new Error("Digite e-mail e senha para criar o usuário.");
+        if (password.length < 6) throw new Error("A senha precisa ter no mínimo 6 caracteres.");
 
         await createUserWithEmailAndPassword(auth, email, password);
-        msg.textContent = "Usuário criado. Agora clique em Entrar.";
+
+        const uid = auth.currentUser?.uid;
+        if (!uid) throw new Error("Usuário criado, mas não foi possível obter UID.");
+
+        // cria perfil imediatamente
+        const profile = await ensureProfile(uid, email);
+
+        show("Usuário criado. Redirecionando...");
+        redirectByRole(profile);
       } catch (e) {
-        msg.textContent = "Erro: " + (e?.message || e);
+        show("Erro: " + (e?.message || e));
       } finally {
-        btn.disabled = false;
+        setBusy(false);
       }
+    }
+
+    btnLogin.addEventListener("click", doLogin);
+    btnCreate.addEventListener("click", createTestUser);
+    btnGoHome.addEventListener("click", () => window.location.href = "index.html");
+
+    // Enter para entrar
+    $("password").addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") doLogin();
     });
   </script>
 </body>
