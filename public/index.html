@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jornada Portal</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: #111827;
+      padding: 40px;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+    }
+
+    p {
+      opacity: 0.85;
+      margin-bottom: 30px;
+    }
+
+    a {
+      display: block;
+      padding: 14px;
+      background: #2563eb;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    a:hover {
+      background: #1d4ed8;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>Jornada Portal</h1>
+    <p>Gestão de entregas, demandas e rotina</p>
+
+    <a href="login.html">Entrar no sistema</a>
+
+    <div class="status" id="status">
+      Conectando ao Firebase...
+    </div>
+  </div>
+
+  <!-- Firebase (teste de conexão) -->
+  <script type="module">
+    import "./js/firebase.js";
+
+    const status = document.getElementById("status");
+    status.textContent = "Firebase conectado com sucesso ✔️";
+    console.log("🔥 Firebase carregado no index.html");
+  </script>
+
+</body>
+</html>
